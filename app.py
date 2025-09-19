@@ -17,16 +17,37 @@ st.set_page_config(
 # ---- Estilos (CSS) ----
 st.markdown("""
 <style>
-/* Sidebar */
+/* Sidebar fondo y tipografía */
 section[data-testid="stSidebar"] {
   background: linear-gradient(180deg, #1e1e2f 0%, #2b2b40 100%);
   color: #fff;
+  padding-top: 10px !important;
 }
-section[data-testid="stSidebar"] h2, 
-section[data-testid="stSidebar"] label {
+
+/* Logo en el sidebar */
+section[data-testid="stSidebar"] img {
+  display: block;
+  margin: 0 auto;
+  max-width: 290px;  /* controla tamaño máximo */
+  margin-bottom: 8px; /* espacio pequeño debajo del logo */
+}
+
+/* Línea divisoria */
+section[data-testid="stSidebar"] hr {
+  margin: 4px 0 8px 0;
+  border: 0;
+  border-top: 1px solid #444;
+}
+
+/* Encabezado de filtros */
+section[data-testid="stSidebar"] h2 {
   color: #e5e7eb !important;
   font-weight: 600;
+  margin: 6px 0;
+  font-size: 1.1rem;
 }
+
+/* Botón limpiar */
 .stButton > button {
   background: linear-gradient(90deg, #9333ea, #3b82f6);
   color: white;
@@ -34,6 +55,8 @@ section[data-testid="stSidebar"] label {
   border: none;
   padding: 6px 12px;
   font-weight: 600;
+  margin-top: 4px;
+  margin-bottom: 8px;
 }
 .stButton > button:hover {
   background: linear-gradient(90deg, #a855f7, #60a5fa);
@@ -48,9 +71,7 @@ section[data-testid="stSidebar"] label {
   box-shadow: 0 4px 12px rgba(0,0,0,0.25);
   transition: transform 0.2s ease-in-out;
 }
-.kpi-card:hover {
-  transform: translateY(-4px);
-}
+.kpi-card:hover { transform: translateY(-4px); }
 .kpi-title { font-size: 14px; opacity: 0.9; }
 .kpi-value { font-size: 32px; font-weight: bold; }
 
@@ -63,13 +84,8 @@ section[data-testid="stSidebar"] label {
   box-shadow: 0 4px 10px rgba(0,0,0,0.08);
   transition: transform 0.2s ease-in-out;
 }
-.card:hover {
-  transform: scale(1.02);
-}
-.card h4 {
-  margin: 0 0 8px 0;
-  color: #111827;
-}
+.card:hover { transform: scale(1.02); }
+.card h4 { margin: 0 0 8px 0; color: #111827; }
 
 /* Badges */
 .badge {
@@ -84,6 +100,7 @@ section[data-testid="stSidebar"] label {
   font-weight: 500;
 }
 </style>
+
 """, unsafe_allow_html=True)
 
 # ================== ENCABEZADO ==================
@@ -183,15 +200,18 @@ if len(sheets) > 1:
 df = normalize_columns(df)
 
 # ================== FILTROS ==================
-st.sidebar.header("Filtros")
-col_btn, col_img = st.sidebar.columns([1,1])
+# Logo arriba en la barra lateral
+st.sidebar.image("data/betagroup_logo.jpg", width=290)
 
+# Línea divisoria
+st.sidebar.markdown("---")
+
+# Encabezado de filtros
+st.sidebar.header("Filtros")
+# Columna para botón
+col_btn, _ = st.sidebar.columns([1,1])
 with col_btn:
     do_reset = st.button("🔄 Limpiar filtros")
-
-with col_img:
-    st.image("data/betagroup_logo.jpg", width=140)  # Logo inicial
-
 df_f = df.copy()
 
 if not do_reset:
@@ -217,6 +237,8 @@ with st.sidebar.expander("🔎 Búsqueda por texto", expanded=False):
         for c in search_cols:
             mask = (mask | df_f[c].fillna("").astype(str).str.contains(query, case=False, na=False))
         df_f = df_f[mask]
+# Línea divisoria
+st.sidebar.markdown("---")
 
 # Imagen al final de todos los filtros
 st.sidebar.image("data/OIP.webp", width=290)
