@@ -136,7 +136,7 @@ st.divider()
 
 
 # ================== CARGA DE DATOS ==================
-DEFAULT_FILE = Path("data") / "Codificación WS Y ARS - Tolima.xlsx"
+DEFAULT_FILE = Path("data") / "consolidado_turismo_LOTE 1.xlsx"
 
 @st.cache_data(show_spinner=False)
 def read_excel(file: Path, sheet_name=None):
