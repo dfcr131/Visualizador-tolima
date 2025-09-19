@@ -5,7 +5,7 @@ from pathlib import Path
 import plotly.express as px
 import folium
 from streamlit_folium import st_folium
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+
 
 # ================== CONFIG BÁSICA ==================
 st.set_page_config(
