@@ -117,7 +117,7 @@ with col_title:
         """
         <div style="text-align: center;">
             <h1>Bienvenido a la Información Cualitativa Tolima</h1>
-            <p>Explora los datos de forma interactiva</p>
+            <p>Levantamiento de información con instrumento de Web Scraping y Análisis de Redes Sociales</p>
         </div>
         """,
         unsafe_allow_html=True
