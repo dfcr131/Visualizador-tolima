@@ -3,6 +3,8 @@ import streamlit as st
 import pandas as pd
 from pathlib import Path
 import plotly.express as px
+import folium
+from streamlit_folium import st_folium
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 # ================== CONFIG BÁSICA ==================
@@ -15,40 +17,106 @@ st.set_page_config(
 # ---- Estilos (CSS) ----
 st.markdown("""
 <style>
-section[data-testid="stSidebar"] { width: 320px !important; }
-.kpi-card {
-  border-radius: 16px; padding: 16px 18px; border: 1px solid rgba(0,0,0,0.06);
-  background: linear-gradient(180deg, rgba(250,250,250,1) 0%, rgba(245,245,245,1) 100%);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+/* Sidebar */
+section[data-testid="stSidebar"] {
+  background: linear-gradient(180deg, #1e1e2f 0%, #2b2b40 100%);
+  color: #fff;
 }
-.kpi-title { font-size: 12px; color: #666; margin: 0; }
-.kpi-value { font-size: 28px; font-weight: 700; margin: 2px 0 0 0; }
+section[data-testid="stSidebar"] h2, 
+section[data-testid="stSidebar"] label {
+  color: #e5e7eb !important;
+  font-weight: 600;
+}
+.stButton > button {
+  background: linear-gradient(90deg, #9333ea, #3b82f6);
+  color: white;
+  border-radius: 8px;
+  border: none;
+  padding: 6px 12px;
+  font-weight: 600;
+}
+.stButton > button:hover {
+  background: linear-gradient(90deg, #a855f7, #60a5fa);
+}
 
-.card {
-  border-radius: 14px; padding: 14px 16px; border: 1px solid rgba(0,0,0,0.08);
-  background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.03); margin-bottom: 10px;
+/* KPI Cards */
+.kpi-card {
+  border-radius: 18px;
+  padding: 18px;
+  background: linear-gradient(135deg, #9333ea 0%, #3b82f6 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  transition: transform 0.2s ease-in-out;
 }
-.card h4 { margin: 0 0 6px 0; }
-.small { color:#64748b; font-size: 12px; }
+.kpi-card:hover {
+  transform: translateY(-4px);
+}
+.kpi-title { font-size: 14px; opacity: 0.9; }
+.kpi-value { font-size: 32px; font-weight: bold; }
+
+/* General Cards */
+.card {
+  border-radius: 14px; 
+  padding: 16px; 
+  border: none;
+  background: #fff;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  transition: transform 0.2s ease-in-out;
+}
+.card:hover {
+  transform: scale(1.02);
+}
+.card h4 {
+  margin: 0 0 8px 0;
+  color: #111827;
+}
+
+/* Badges */
 .badge {
-  display:inline-block; padding:3px 8px; border-radius:999px; background:#eef2ff; color:#3730a3;
-  border:1px solid #e0e7ff; font-size:12px; margin-right:6px;
+  display:inline-block; 
+  padding:4px 10px; 
+  border-radius:999px; 
+  background: #eef2ff; 
+  color:#4338ca; 
+  border:1px solid #c7d2fe; 
+  font-size:12px; 
+  margin:2px;
+  font-weight: 500;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # ================== ENCABEZADO ==================
-col_logo, col_title = st.columns([1, 6], vertical_alignment="center")
+col_logo, col_title, col_extra = st.columns([2, 5, 2], vertical_alignment="center")
+
 with col_logo:
     try:
-        st.image("data/ubicacion.png", width=64)
+        st.image("data/indus.png", width=120)  # Imagen izquierda
     except Exception:
         pass
+
 with col_title:
-    st.title("Datos cualitativos – Tolima")
-    st.caption("Información cualitativa levantada con instrumentos de **Web Scraping** y **Análisis de Redes Sociales**")
+    st.markdown(
+        """
+        <div style="text-align: center;">
+            <h1>Bienvenido a la Información Cualitativa Tolima</h1>
+            <p>Explora los datos de forma interactiva</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with col_extra:
+    c1, c2 = st.columns([1, 2])  # más espacio vacío a la izquierda
+    with c2:
+        try:
+            st.image("data/fontur_logo.png", width=120)  # Imagen derecha desplazada
+        except Exception:
+            pass
 
 st.divider()
+
+
 
 # ================== CARGA DE DATOS ==================
 DEFAULT_FILE = Path("data") / "Codificación WS Y ARS - Tolima.xlsx"
@@ -116,8 +184,14 @@ df = normalize_columns(df)
 
 # ================== FILTROS ==================
 st.sidebar.header("Filtros")
-col_btn, _ = st.sidebar.columns([1,1])
-do_reset = col_btn.button("🔄 Limpiar filtros")
+col_btn, col_img = st.sidebar.columns([1,1])
+
+with col_btn:
+    do_reset = st.button("🔄 Limpiar filtros")
+
+with col_img:
+    st.image("data/betagroup_logo.jpg", width=140)  # Logo inicial
+
 df_f = df.copy()
 
 if not do_reset:
@@ -144,6 +218,9 @@ with st.sidebar.expander("🔎 Búsqueda por texto", expanded=False):
             mask = (mask | df_f[c].fillna("").astype(str).str.contains(query, case=False, na=False))
         df_f = df_f[mask]
 
+# Imagen al final de todos los filtros
+st.sidebar.image("data/OIP.webp", width=290)
+
 # ================== KPIs ==================
 c1, c2, c3, c4 = st.columns(4)
 with c1:
@@ -161,15 +238,47 @@ with c4:
 st.caption(f"Fuente: **{DEFAULT_FILE.name}** · Hoja: **{selected_sheet}**")
 st.divider()
 
-# ================== TABS PRINCIPALES ==================
+# ================== TABS ==================
 tab_resumen, tab_tabla, tab_explorar, tab_barras = st.tabs([
     "📌 Resumen",
-    "📋 Tabla interactiva",
-    "🗺️ Explorador (Treemap/Sunburst)",
+    "📋 Tarjetas de Información",
+    "🗺️ Mapa Geografico",
     "📊 Barras"
 ])
 
-# --------- RESUMEN ----------
+# ================== CSS PARA AGRANDAR TABS ==================
+st.markdown("""
+    <style>
+    button[data-baseweb="tab"] > div[data-testid="stMarkdownContainer"] p {
+        font-size: 18px;   /* tamaño de la letra */
+        font-weight: 600;  /* más negrita */
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+
+# Función de estilo reutilizable (sin highlight_max)
+def estilo_tabla(df):
+    return (
+        df.style
+        .set_properties(**{
+            "background-color": "#f9fafb",   # gris muy claro
+            "color": "#111827",              # texto oscuro
+            "border-color": "#e5e7eb",       # bordes suaves
+            "border-radius": "8px",          # esquinas redondeadas
+            "padding": "6px",                # espacio interno
+        })
+        .set_table_styles([
+            {"selector": "thead th", "props": [("background-color", "#3b82f6"), 
+                                               ("color", "white"),
+                                               ("font-size", "14px"),
+                                               ("padding", "8px"),
+                                               ("text-align", "center")]},
+            {"selector": "tbody td", "props": [("font-size", "13px"),
+                                               ("text-align", "center")]}
+        ])
+    )
+
 with tab_resumen:
     # Pequeños rankings
     cols = st.columns(3)
@@ -178,147 +287,177 @@ with tab_resumen:
         top_aspecto.columns = ["Aspecto", "Conteo"]
         with cols[0]:
             st.subheader("Top 5 Aspectos")
-            st.dataframe(top_aspecto, use_container_width=True, hide_index=True)
+            st.dataframe(estilo_tabla(top_aspecto), use_container_width=True, hide_index=True)
 
     if available("Enfoque Turístico", df_f) and not df_f["Enfoque Turístico"].dropna().empty:
         top_enfoque = df_f["Enfoque Turístico"].value_counts().head(5).reset_index()
         top_enfoque.columns = ["Enfoque Turístico", "Conteo"]
         with cols[1]:
             st.subheader("Top 5 Enfoques")
-            st.dataframe(top_enfoque, use_container_width=True, hide_index=True)
+            st.dataframe(estilo_tabla(top_enfoque), use_container_width=True, hide_index=True)
 
     if available("Municipio", df_f) and not df_f["Municipio"].dropna().empty:
         top_mpio = df_f["Municipio"].value_counts().head(5).reset_index()
         top_mpio.columns = ["Municipio", "Conteo"]
         with cols[2]:
             st.subheader("Top 5 Municipios")
-            st.dataframe(top_mpio, use_container_width=True, hide_index=True)
+            st.dataframe(estilo_tabla(top_mpio), use_container_width=True, hide_index=True)
+
+
 
 # --------- TABLA (AgGrid) ----------
 with tab_tabla:
-    st.subheader("Tabla de resultados (interactiva)")
+    st.subheader("Explora los registros en formato tarjetas")
+    
     if len(df_f) == 0:
         st.info("No hay filas con los filtros actuales. Ajusta filtros o limpia la búsqueda.")
     else:
-        # Columnas largas como wrap
-        col_defs_wrap = ["Descripción", "Titulo", "Título", "Actor", "Nombre"]
-        for c in col_defs_wrap:
-            if available(c, df_f):
-                df_f[c] = df_f[c].astype(str)
+        for i, row in df_f.head(50).iterrows():  # límite para no cargar demasiadas
+            with st.container():
+                st.markdown('<div class="card">', unsafe_allow_html=True)
+                
+                # Título dinámico
+                title = row.get("Título") or row.get("Titulo") or row.get("Nombre") or f"Registro {i}"
+                st.markdown(f"<h4>{title}</h4>", unsafe_allow_html=True)
 
-        gb = GridOptionsBuilder.from_dataframe(df_f)
-        gb.configure_default_column(
-            filter=True, sortable=True, resizable=True, wrapText=True, autoHeight=True
-        )
-        gb.configure_grid_options(domLayout="normal")
-        gb.configure_selection("multiple", use_checkbox=True, header_checkbox=True)
-        grid_options = gb.build()
+                # Badges dinámicos
+                badges = []
+                for b in ["Departamento", "Municipio", "Enfoque Turístico", "Aspecto", "Sector", "Actor"]:
+                    v = row.get(b)
+                    if v and str(v).strip():
+                        badges.append(f'<span class="badge">{b}: {v}</span>')
+                if badges:
+                    st.markdown(" ".join(badges), unsafe_allow_html=True)
 
-        grid = AgGrid(
-            df_f,
-            gridOptions=grid_options,
-            update_mode=GridUpdateMode.MODEL_CHANGED,
-            enable_enterprise_modules=False,
-            fit_columns_on_grid_load=True,
-            allow_unsafe_jscode=False,
-            height=520, theme="balham"
-        )
+                # Descripción
+                desc = row.get("Descripción") or ""
+                if desc:
+                    st.markdown(f"<p>{desc}</p>", unsafe_allow_html=True)
 
-        sel_rows = grid["selected_rows"]
-        st.download_button(
-            "⬇️ Descargar CSV filtrado",
-            df_f.to_csv(index=False).encode("utf-8"),
-            file_name="datos_filtrados.csv",
-            mime="text/csv",
-            type="primary"
-        )
+                st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown("—")
-        st.subheader("Detalle de selección")
-        if sel_rows:
-            for i, r in enumerate(sel_rows[:15], start=1):
-                with st.container():
-                    st.markdown('<div class="card">', unsafe_allow_html=True)
-                    title = r.get("Título") or r.get("Titulo") or r.get("Nombre") or f"Registro {i}"
-                    st.markdown(f"<h4>{title}</h4>", unsafe_allow_html=True)
-                    badges = []
-                    for b in ["Departamento", "Municipio", "Enfoque Turístico", "Aspecto", "Sector", "Actor"]:
-                        v = r.get(b)
-                        if v and str(v).strip():
-                            badges.append(f'<span class="badge">{b}: {v}</span>')
-                    if badges:
-                        st.markdown(" ".join(badges), unsafe_allow_html=True)
-                    desc = r.get("Descripción") or ""
-                    if desc:
-                        st.markdown(f"<p>{desc}</p>", unsafe_allow_html=True)
-                    st.markdown('</div>', unsafe_allow_html=True)
-        else:
-            st.caption("Selecciona filas en la tabla para ver el detalle aquí.")
 
 # --------- EXPLORADOR (Treemap / Sunburst) ----------
+# Coordenadas aproximadas de los departamentos
+coords_departamentos = {
+    "Tolima": [4.3333, -75.0000],
+    "Huila": [2.9167, -75.3333],
+    "Caquetá": [1.6000, -75.6000],
+    "Putumayo": [0.3000, -76.5000],
+}
+
 with tab_explorar:
-    st.subheader("Explorador jerárquico")
-    st.caption("Usa combinaciones de Departamento / Municipio / Aspecto para navegar los volúmenes.")
+    st.subheader("🗺️ Explorador geográfico con filtros")
+    st.caption("Filtra por Departamento, Municipio, Aspecto, Enfoque o Sector y visualiza los resultados en el mapa.")
 
-    # Construir rutas disponibles según columnas presentes
+    # --- Columnas disponibles ---
     dims = [d for d in ["Departamento", "Municipio", "Aspecto", "Enfoque Turístico", "Sector"] if available(d, df_f)]
-    if len(dims) < 2:
-        st.info("Se requieren al menos 2 columnas categóricas (p. ej., Departamento y Municipio) para el explorador.")
+
+    if len(dims) == 0:
+        st.info("⚠️ No se encuentran columnas categóricas para filtrar.")
     else:
-        c1, c2 = st.columns(2)
-        with c1:
-            path_treemap = st.multiselect("Jerarquía Treemap (orden)", dims, default=dims[:3], key="tree")
-        with c2:
-            path_sun = st.multiselect("Jerarquía Sunburst (orden)", dims, default=dims[:3], key="sun")
+        # Crear filtros dinámicos
+        filtros = {}
+        for dim in dims:
+            valores = sorted(df_f[dim].dropna().unique())
+            seleccion = st.multiselect(f"📍 Filtrar por {dim}:", valores, default=valores)
+            filtros[dim] = seleccion
 
-        def clean_for_plot(df_, cols):
-            d = df_[cols].dropna(how="all").copy()
-            for c in cols:
-                d[c] = d[c].fillna("Sin dato").astype(str).str.strip()
-                d.loc[d[c] == "", c] = "Sin dato"
-            d["value"] = 1
-            return d
+        # Aplicar filtros
+        df_filtrado = df_f.copy()
+        for dim, seleccion in filtros.items():
+            if seleccion:  # Solo aplicar si hay selección
+                df_filtrado = df_filtrado[df_filtrado[dim].isin(seleccion)]
 
-        if path_treemap:
-            data_tree = clean_for_plot(df_f, path_treemap)
-            fig_tree = px.treemap(
-                data_tree,
-                path=[px.Constant("Total")] + path_treemap,
-                values="value",
-                hover_data=path_treemap
-            )
-            fig_tree.update_traces(root_color="lightgrey")
-            st.plotly_chart(fig_tree, use_container_width=True)
-        if path_sun:
-            data_sun = clean_for_plot(df_f, path_sun)
-            fig_sun = px.sunburst(
-                data_sun,
-                path=[px.Constant("Total")] + path_sun,
-                values="value",
-                hover_data=path_sun,
-                branchvalues="total"
-            )
-            st.plotly_chart(fig_sun, use_container_width=True)
+        # Layout en dos columnas
+        col1, col2 = st.columns([2, 2])
+
+        # --- Resumen en tabla ---
+        with col1:
+            st.markdown("### 📊 Resumen filtrado")
+            if len(df_filtrado) == 0:
+                st.info("No hay registros con los filtros seleccionados.")
+            else:
+                resumen = df_filtrado.groupby(dims).size().reset_index(name="Conteo")
+                st.dataframe(resumen, use_container_width=True)
+
+        # --- Mapa geográfico ---
+        with col2:
+            st.markdown("### 🗺️ Mapa interactivo")
+            if len(df_filtrado) == 0:
+                st.caption("No hay datos para mostrar en el mapa.")
+            else:
+                # Agrupar por departamento
+                departamentos = df_filtrado.groupby("Departamento").size().reset_index(name="Conteo")
+
+                # Crear mapa
+                m = folium.Map(location=[2.5, -75.0], zoom_start=6, tiles="cartodbpositron")
+
+                for _, row in departamentos.iterrows():
+                    depto = row["Departamento"]
+                    conteo = row["Conteo"]
+                    coords = coords_departamentos.get(depto)
+
+                    if coords:
+                        folium.CircleMarker(
+                            location=coords,
+                            radius=8 + conteo * 0.3,
+                            popup=f"<b>{depto}</b><br>Registros: {conteo}",
+                            color="darkblue",
+                            fill=True,
+                            fill_color="purple",
+                            fill_opacity=0.6,
+                        ).add_to(m)
+
+                # Mostrar mapa
+                st_folium(m, width=800, height=500)
 
 # --------- BARRAS DINÁMICAS ----------
 with tab_barras:
-    st.subheader("Barras por categoría")
+    st.subheader("📊 Comparación por categorías")
+
     cols = [c for c in ["Aspecto", "Enfoque Turístico", "Municipio", "Departamento", "Sector"] if available(c, df_f)]
+    
     if not cols:
         st.info("No hay columnas categóricas disponibles para graficar.")
     else:
-        col_sel = st.selectbox("Categoría", cols, index=0)
-        top_n = st.slider("Top N", 5, 50, 20, step=5)
+        col_sel = st.selectbox("📍 Selecciona categoría", cols, index=0)
+        top_n = st.slider("🔝 Top N", 5, 50, 20, step=5)
+
         s = df_f[col_sel].dropna().astype(str).str.strip()
         s = s[s != ""]
+        
         if s.empty:
-            st.info("No hay datos válidos para la categoría seleccionada.")
+            st.info("⚠️ No hay datos válidos para la categoría seleccionada.")
         else:
             vc = s.value_counts().head(top_n).reset_index()
             vc.columns = [col_sel, "Conteo"]
+
             fig = px.bar(
-                vc, x="Conteo", y=col_sel, orientation="h",
-                text="Conteo"
+                vc,
+                x="Conteo",
+                y=col_sel,
+                orientation="h",
+                text="Conteo",
+                color="Conteo",
+                color_continuous_scale="plasma"  # gradiente bonito
             )
-            fig.update_layout(yaxis={"categoryorder":"total ascending"}, height=520)
+
+            fig.update_traces(
+                texttemplate="%{text}",
+                textposition="outside",
+                marker=dict(line=dict(width=0.5, color="white"))
+            )
+
+            fig.update_layout(
+                yaxis={"categoryorder": "total ascending"},
+                height=600,
+                margin=dict(l=10, r=10, t=30, b=10),
+                xaxis_title="Número de registros",
+                yaxis_title="",
+                plot_bgcolor="rgba(0,0,0,0)",  # fondo transparente
+                paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(size=13)
+            )
+
             st.plotly_chart(fig, use_container_width=True)
