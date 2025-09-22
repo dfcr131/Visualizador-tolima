@@ -6,7 +6,7 @@ import plotly.express as px
 import folium
 from streamlit_folium import st_folium
 import requests
-from streamlit_tags import st_tags
+
 # ================== CONFIG BÁSICA ==================
 st.set_page_config(
     page_title="Información cualitativa departamental",
