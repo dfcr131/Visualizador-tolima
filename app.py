@@ -9,7 +9,7 @@ from streamlit_folium import st_folium
 
 # ================== CONFIG BÁSICA ==================
 st.set_page_config(
-    page_title="Información cualitativa Tolima",
+    page_title="Información cualitativa departamental",
     page_icon="data/ubicacion.png",
     layout="wide"
 )
@@ -116,7 +116,7 @@ with col_title:
     st.markdown(
         """
         <div style="text-align: center;">
-            <h1>Bienvenido a la Información Cualitativa Tolima</h1>
+            <h1>Bienvenido a la Información Cualitativa Departamental</h1>
             <p>Levantamiento de información con instrumento de Web Scraping y Análisis de Redes Sociales</p>
         </div>
         """,
@@ -352,12 +352,20 @@ with tab_tabla:
                     st.markdown(" ".join(badges), unsafe_allow_html=True)
 
                 # Descripción
+                st.markdown(f"<h5>Descripción</h5>", unsafe_allow_html=True)
                 desc = row.get("Descripción") or ""
                 if desc:
                     st.markdown(f"<p>{desc}</p>", unsafe_allow_html=True)
 
                 st.markdown('</div>', unsafe_allow_html=True)
 
+                 # Aporte a la investigacion
+                st.markdown(f"<h5>Aporte a la investigación</h5>", unsafe_allow_html=True)
+                apInvest = row.get("Aporte a la Investigación") or ""
+                if apInvest:
+                    st.markdown(f"<p>{apInvest}</p>", unsafe_allow_html=True)
+
+                st.markdown('</div>', unsafe_allow_html=True)
 
 # --------- EXPLORADOR (Treemap / Sunburst) ----------
 # Coordenadas aproximadas de los departamentos
