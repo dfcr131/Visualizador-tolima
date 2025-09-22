@@ -388,138 +388,140 @@ def cargar_departamentos():
         st.error("⚠️ No se pudo obtener metadatos de GeoBoundaries.")
         return None
 
-geojson_departamentos = cargar_departamentos()
 
-# -------------------------------
-# Coordenadas aproximadas de municipios
-# -------------------------------
-coords_municipios = {
-    # 🔹 Huila
-    "Villavieja": [3.2189, -75.2189],
-    "Neiva": [2.9386, -75.2819],
-    "Garzón": [2.1953, -75.6275],
-    "Paicol": [2.4500, -75.7667],
-    "Yaguará": [2.6642, -75.5178],
-    "San Agustín": [1.8828, -76.2683],
-    "Pitalito": [1.8536, -76.0498],
-
-    # 🔹 Tolima
-    "Líbano": [4.9211, -75.0622],
-    "San Sebastián de Mariquita": [5.1989, -74.8944],
-    "Falan": [5.1175, -74.9517],
-    "Ibagué": [4.4389, -75.2322],
-    "Honda": [5.0713, -74.6949],
-    "Armero": [5.0300, -74.9000],
-    "Prado": [3.7500, -74.9167],
-
-    # 🔹 Putumayo
-    "Puerto Asís": [0.5052, -76.4951],
-    "Orito": [0.6781, -76.8723],
-    "Puerto Caicedo": [0.6953, -76.6044],
-    "Valle del Guamuez": [0.4519, -76.9292],
-    "Villagarzón": [0.9892, -76.6279],
-    "Mocoa": [1.1474, -76.6473],
-    "Sibundoy": [1.2081, -76.9220],
-    "Colón": [1.1900, -76.9740],
-    "Santiago": [1.1461, -77.0031],
-    "San Francisco": [1.1761, -76.8789],
-
-    # 🔹 Caquetá
-    "San Vicente del Caguán": [2.1167, -74.7667],
-    "Doncello": [1.6789, -75.2806],
-    "Florencia": [1.6144, -75.6062],
-    "San José del Fragua": [1.3300, -75.9700],
-    "Belén de los Andaquies": [1.4167, -75.8667],
-}
-
-# --- Relación de municipios por departamento ---
-municipios_por_departamento = {
-    "Huila": ["Villavieja", "Neiva", "Garzón", "Paicol", "Yaguará", "San Agustín", "Pitalito"],
-    "Tolima": ["Líbano", "San Sebastián de Mariquita", "Falan", "Ibagué", "Honda", "Armero", "Prado"],
-    "Putumayo": ["Puerto Asís", "Orito", "Puerto Caicedo", "Valle del Guamuez", "Villagarzón", "Mocoa", "Sibundoy", "Colón", "Santiago", "San Francisco"],
-    "Caquetá": ["San Vicente del Caguán", "Doncello", "Florencia", "San José del Fragua", "Belén de los Andaquies"],
-}
 
 # -------------------------------
 # Explorador con filtros
 # -------------------------------
-with st.container():
-    st.subheader("🗺️ Explorador geográfico con filtros")
-    st.caption("Filtra por Departamento, Municipio, Aspecto, Enfoque o Sector y visualiza los resultados en el mapa.")
+with tab_explorar:
+    geojson_departamentos = cargar_departamentos()
 
-    # --- Columnas disponibles dinámicamente ---
-    dims = [d for d in ["Departamento", "Municipio", "Aspecto", "Enfoque Turístico", "Sector"] if d in df_f.columns]
+    # -------------------------------
+    # Coordenadas aproximadas de municipios
+    # -------------------------------
+    coords_municipios = {
+        # 🔹 Huila
+        "Villavieja": [3.2189, -75.2189],
+        "Neiva": [2.9386, -75.2819],
+        "Garzón": [2.1953, -75.6275],
+        "Paicol": [2.4500, -75.7667],
+        "Yaguará": [2.6642, -75.5178],
+        "San Agustín": [1.8828, -76.2683],
+        "Pitalito": [1.8536, -76.0498],
 
-    if len(dims) == 0:
-        st.info("⚠️ No se encuentran columnas categóricas para filtrar.")
-    else:
-        # Crear filtros dinámicos
-        filtros = {}
-        for dim in dims:
-            valores = sorted(df_f[dim].dropna().unique())
-            seleccion = st.multiselect(f"📍 Filtrar por {dim}:", valores, default=valores)
-            filtros[dim] = seleccion
+        # 🔹 Tolima
+        "Líbano": [4.9211, -75.0622],
+        "San Sebastián de Mariquita": [5.1989, -74.8944],
+        "Falan": [5.1175, -74.9517],
+        "Ibagué": [4.4389, -75.2322],
+        "Honda": [5.0713, -74.6949],
+        "Armero": [5.0300, -74.9000],
+        "Prado": [3.7500, -74.9167],
 
-        # Aplicar filtros
-        df_filtrado = df_f.copy()
-        for dim, seleccion in filtros.items():
-            if seleccion:
-                df_filtrado = df_filtrado[df_filtrado[dim].isin(seleccion)]
+        # 🔹 Putumayo
+        "Puerto Asís": [0.5052, -76.4951],
+        "Orito": [0.6781, -76.8723],
+        "Puerto Caicedo": [0.6953, -76.6044],
+        "Valle del Guamuez": [0.4519, -76.9292],
+        "Villagarzón": [0.9892, -76.6279],
+        "Mocoa": [1.1474, -76.6473],
+        "Sibundoy": [1.2081, -76.9220],
+        "Colón": [1.1900, -76.9740],
+        "Santiago": [1.1461, -77.0031],
+        "San Francisco": [1.1761, -76.8789],
 
-        # Layout en dos columnas
-        col1, col2 = st.columns([2, 2])
+        # 🔹 Caquetá
+        "San Vicente del Caguán": [2.1167, -74.7667],
+        "Doncello": [1.6789, -75.2806],
+        "Florencia": [1.6144, -75.6062],
+        "San José del Fragua": [1.3300, -75.9700],
+        "Belén de los Andaquies": [1.4167, -75.8667],
+    }
 
-        # --- Resumen en tabla ---
-        with col1:
-            st.markdown("### 📊 Resumen filtrado")
-            if len(df_filtrado) == 0:
-                st.info("No hay registros con los filtros seleccionados.")
-            else:
-                resumen = df_filtrado.groupby(dims).size().reset_index(name="Conteo")
-                st.dataframe(resumen, use_container_width=True)
+    # --- Relación de municipios por departamento ---
+    municipios_por_departamento = {
+        "Huila": ["Villavieja", "Neiva", "Garzón", "Paicol", "Yaguará", "San Agustín", "Pitalito"],
+        "Tolima": ["Líbano", "San Sebastián de Mariquita", "Falan", "Ibagué", "Honda", "Armero", "Prado"],
+        "Putumayo": ["Puerto Asís", "Orito", "Puerto Caicedo", "Valle del Guamuez", "Villagarzón", "Mocoa", "Sibundoy", "Colón", "Santiago", "San Francisco"],
+        "Caquetá": ["San Vicente del Caguán", "Doncello", "Florencia", "San José del Fragua", "Belén de los Andaquies"],
+    }
+    with st.container():
+        st.subheader("🗺️ Explorador geográfico con filtros")
+        st.caption("Filtra por Departamento, Municipio, Aspecto, Enfoque o Sector y visualiza los resultados en el mapa.")
 
-        # --- Mapa geográfico ---
-        with col2:
-            st.markdown("### 🗺️ Mapa interactivo")
-            if len(df_filtrado) == 0:
-                st.caption("No hay datos para mostrar en el mapa.")
-            else:
-                departamentos = df_filtrado["Departamento"].unique()
+        # --- Columnas disponibles dinámicamente ---
+        dims = [d for d in ["Departamento", "Municipio", "Aspecto", "Enfoque Turístico", "Sector"] if d in df_f.columns]
 
-                # Crear mapa
-                m = folium.Map(location=[2.5, -75.0], zoom_start=6, tiles="cartodbpositron")
+        if len(dims) == 0:
+            st.info("⚠️ No se encuentran columnas categóricas para filtrar.")
+        else:
+            # Crear filtros dinámicos
+            filtros = {}
+            for dim in dims:
+                valores = sorted(df_f[dim].dropna().unique())
+                seleccion = st.multiselect(f"📍 Filtrar por {dim}:", valores, default=valores)
+                filtros[dim] = seleccion
 
-                # Dibujar solo los departamentos filtrados
-                if geojson_departamentos:
-                    for feature in geojson_departamentos["features"]:
-                        nombre_depto = feature["properties"]["shapeName"]
-                        if nombre_depto in departamentos:
-                            folium.GeoJson(
-                                feature,
-                                name=nombre_depto,
-                                style_function=lambda f: {
-                                    "fillColor": "#3186cc",
-                                    "color": "black",
-                                    "weight": 2,
-                                    "fillOpacity": 0.2,
-                                },
-                                tooltip=folium.GeoJsonTooltip(fields=["shapeName"], aliases=["Departamento:"]),
-                            ).add_to(m)
+            # Aplicar filtros
+            df_filtrado = df_f.copy()
+            for dim, seleccion in filtros.items():
+                if seleccion:
+                    df_filtrado = df_filtrado[df_filtrado[dim].isin(seleccion)]
 
-                            # --- Marcar municipios de ese departamento ---
-                            municipios = municipios_por_departamento.get(nombre_depto, [])
-                            for municipio in municipios:
-                                coords_mun = coords_municipios.get(municipio)
-                                if coords_mun:
-                                    folium.Marker(
-                                        location=coords_mun,
-                                        popup=f"<b>{municipio}</b><br>Departamento: {nombre_depto}",
-                                        tooltip=f"{municipio} ({nombre_depto})",   # 👈 tooltip al pasar el cursor
-                                        icon=folium.Icon(color="red", icon="info-sign"),
-                                    ).add_to(m)
+            # Layout en dos columnas
+            col1, col2 = st.columns([2, 2])
 
-                # Mostrar mapa
-                st_folium(m, width=900, height=600)
+            # --- Resumen en tabla ---
+            with col1:
+                st.markdown("### 📊 Resumen filtrado")
+                if len(df_filtrado) == 0:
+                    st.info("No hay registros con los filtros seleccionados.")
+                else:
+                    resumen = df_filtrado.groupby(dims).size().reset_index(name="Conteo")
+                    st.dataframe(resumen, use_container_width=True)
+
+            # --- Mapa geográfico ---
+            with col2:
+                st.markdown("### 🗺️ Mapa interactivo")
+                if len(df_filtrado) == 0:
+                    st.caption("No hay datos para mostrar en el mapa.")
+                else:
+                    departamentos = df_filtrado["Departamento"].unique()
+
+                    # Crear mapa
+                    m = folium.Map(location=[2.5, -75.0], zoom_start=6, tiles="cartodbpositron")
+
+                    # Dibujar solo los departamentos filtrados
+                    if geojson_departamentos:
+                        for feature in geojson_departamentos["features"]:
+                            nombre_depto = feature["properties"]["shapeName"]
+                            if nombre_depto in departamentos:
+                                folium.GeoJson(
+                                    feature,
+                                    name=nombre_depto,
+                                    style_function=lambda f: {
+                                        "fillColor": "#3186cc",
+                                        "color": "black",
+                                        "weight": 2,
+                                        "fillOpacity": 0.2,
+                                    },
+                                    tooltip=folium.GeoJsonTooltip(fields=["shapeName"], aliases=["Departamento:"]),
+                                ).add_to(m)
+
+                                # --- Marcar municipios de ese departamento ---
+                                municipios = municipios_por_departamento.get(nombre_depto, [])
+                                for municipio in municipios:
+                                    coords_mun = coords_municipios.get(municipio)
+                                    if coords_mun:
+                                        folium.Marker(
+                                            location=coords_mun,
+                                            popup=f"<b>{municipio}</b><br>Departamento: {nombre_depto}",
+                                            tooltip=f"{municipio} ({nombre_depto})",   # 👈 tooltip al pasar el cursor
+                                            icon=folium.Icon(color="red", icon="info-sign"),
+                                        ).add_to(m)
+
+                    # Mostrar mapa
+                    st_folium(m, width=900, height=600)
 
 # --------- BARRAS DINÁMICAS ----------
 with tab_barras:
