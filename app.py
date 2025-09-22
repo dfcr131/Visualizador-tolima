@@ -5,7 +5,7 @@ from pathlib import Path
 import plotly.express as px
 import folium
 from streamlit_folium import st_folium
-
+import json
 
 # ================== CONFIG BÁSICA ==================
 st.set_page_config(
@@ -368,12 +368,60 @@ with tab_tabla:
                 st.markdown('</div>', unsafe_allow_html=True)
 
 # --------- EXPLORADOR (Treemap / Sunburst) ----------
-# Coordenadas aproximadas de los departamentos
+# --- Coordenadas aproximadas de municipios específicos ---
+coords_municipios = {
+    # 🔹 Huila
+    "Villavieja": [3.2189, -75.2189],
+    "Neiva": [2.9386, -75.2819],
+    "Garzón": [2.1953, -75.6275],
+    "Paicol": [2.4500, -75.7667],
+    "Yaguará": [2.6642, -75.5178],
+    "San Agustín": [1.8828, -76.2683],
+    "Pitalito": [1.8536, -76.0498],
+
+    # 🔹 Tolima
+    "Líbano": [4.9211, -75.0622],
+    "San Sebastián de Mariquita": [5.1989, -74.8944],
+    "Falan": [5.1175, -74.9517],
+    "Ibagué": [4.4389, -75.2322],
+    "Honda": [5.0713, -74.6949],
+    "Armero": [5.0300, -74.9000],
+    "Prado": [3.7500, -74.9167],
+
+    # 🔹 Putumayo
+    "Puerto Asís": [0.5052, -76.4951],
+    "Orito": [0.6781, -76.8723],
+    "Puerto Caicedo": [0.6953, -76.6044],
+    "Valle del Guamuez": [0.4519, -76.9292],
+    "Villagarzón": [0.9892, -76.6279],
+    "Mocoa": [1.1474, -76.6473],
+    "Sibundoy": [1.2081, -76.9220],
+    "Colón": [1.1900, -76.9740],
+    "Santiago": [1.1461, -77.0031],
+    "San Francisco": [1.1761, -76.8789],
+
+    # 🔹 Caquetá
+    "San Vicente del Caguán": [2.1167, -74.7667],
+    "Doncello": [1.6789, -75.2806],  # El Doncello
+    "Florencia": [1.6144, -75.6062],
+    "San José del Fragua": [1.3300, -75.9700],
+    "Belén de los Andaquies": [1.4167, -75.8667],
+}
+
+# --- Coordenadas aproximadas de departamentos ---
 coords_departamentos = {
     "Tolima": [4.3333, -75.0000],
     "Huila": [2.9167, -75.3333],
     "Caquetá": [1.6000, -75.6000],
     "Putumayo": [0.3000, -76.5000],
+}
+
+# --- Relación de municipios por departamento ---
+municipios_por_departamento = {
+    "Huila": ["Villavieja", "Neiva", "Garzón", "Paicol", "Yaguará", "San Agustín", "Pitalito"],
+    "Tolima": ["Líbano", "San Sebastián de Mariquita", "Falan", "Ibagué", "Honda", "Armero", "Prado"],
+    "Putumayo": ["Puerto Asís", "Orito", "Puerto Caicedo", "Valle del Guamuez", "Villagarzón", "Mocoa", "Sibundoy", "Colón", "Santiago", "San Francisco"],
+    "Caquetá": ["San Vicente del Caguán", "Doncello", "Florencia", "San José del Fragua", "Belén de los Andaquies"],
 }
 
 with tab_explorar:
@@ -423,6 +471,7 @@ with tab_explorar:
                 # Crear mapa
                 m = folium.Map(location=[2.5, -75.0], zoom_start=6, tiles="cartodbpositron")
 
+                # --- 1) Marcar departamentos seleccionados ---
                 for _, row in departamentos.iterrows():
                     depto = row["Departamento"]
                     conteo = row["Conteo"]
@@ -439,8 +488,20 @@ with tab_explorar:
                             fill_opacity=0.6,
                         ).add_to(m)
 
+                        # --- 2) Marcar municipios del departamento seleccionado ---
+                        municipios = municipios_por_departamento.get(depto, [])
+                        for municipio in municipios:
+                            coords_mun = coords_municipios.get(municipio)
+                            if coords_mun:
+                                folium.Marker(
+                                    location=coords_mun,
+                                    popup=f"<b>{municipio}</b><br>Departamento: {depto}",
+                                    icon=folium.Icon(color="red", icon="info-sign"),
+                                ).add_to(m)
+
                 # Mostrar mapa
                 st_folium(m, width=800, height=500)
+
 
 # --------- BARRAS DINÁMICAS ----------
 with tab_barras:
