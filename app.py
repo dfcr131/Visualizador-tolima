@@ -517,7 +517,7 @@ with tab_explorar:
                                             location=coords_mun,
                                             popup=f"<b>{municipio}</b><br>Departamento: {nombre_depto}",
                                             tooltip=f"{municipio} ({nombre_depto})",   # 👈 tooltip al pasar el cursor
-                                            icon=folium.Icon(color="red", icon="info-sign"),
+                                            icon=folium.Icon(color="blue", icon="", prefix="fa"),
                                         ).add_to(m)
 
                     # Mostrar mapa
