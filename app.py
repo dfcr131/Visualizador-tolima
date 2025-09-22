@@ -6,6 +6,7 @@ import plotly.express as px
 import folium
 from streamlit_folium import st_folium
 import requests
+
 # ================== CONFIG BÁSICA ==================
 st.set_page_config(
     page_title="Información cualitativa departamental",
@@ -13,6 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
+# Inyectar CSS personalizado para las etiquetas
 # ---- Estilos (CSS) ----
 st.markdown("""
 <style>
@@ -389,7 +391,6 @@ def cargar_departamentos():
         return None
 
 
-
 # -------------------------------
 # Explorador con filtros
 # -------------------------------
@@ -445,6 +446,7 @@ with tab_explorar:
         "Putumayo": ["Puerto Asís", "Orito", "Puerto Caicedo", "Valle del Guamuez", "Villagarzón", "Mocoa", "Sibundoy", "Colón", "Santiago", "San Francisco"],
         "Caquetá": ["San Vicente del Caguán", "Doncello", "Florencia", "San José del Fragua", "Belén de los Andaquies"],
     }
+
     with st.container():
         st.subheader("🗺️ Explorador geográfico con filtros")
         st.caption("Filtra por Departamento, Municipio, Aspecto, Enfoque o Sector y visualiza los resultados en el mapa.")
@@ -491,7 +493,11 @@ with tab_explorar:
                     # Crear mapa
                     m = folium.Map(location=[2.5, -75.0], zoom_start=6, tiles="cartodbpositron")
 
-                    # Dibujar solo los departamentos filtrados
+                    # --- Colores para departamentos filtrados ---
+                    colores = ["#FF5733", "#33FF57", "#3357FF", "#F1C40F", "#9B59B6", "#E67E22", "#1ABC9C"]
+                    color_map = {depto: colores[i % len(colores)] for i, depto in enumerate(departamentos)}
+
+                    # Dibujar departamentos y municipios
                     if geojson_departamentos:
                         for feature in geojson_departamentos["features"]:
                             nombre_depto = feature["properties"]["shapeName"]
@@ -499,16 +505,16 @@ with tab_explorar:
                                 folium.GeoJson(
                                     feature,
                                     name=nombre_depto,
-                                    style_function=lambda f: {
-                                        "fillColor": "#3186cc",
+                                    style_function=lambda f, nombre=nombre_depto: {
+                                        "fillColor": color_map[nombre],
                                         "color": "black",
                                         "weight": 2,
-                                        "fillOpacity": 0.2,
+                                        "fillOpacity": 0.5,
                                     },
                                     tooltip=folium.GeoJsonTooltip(fields=["shapeName"], aliases=["Departamento:"]),
                                 ).add_to(m)
 
-                                # --- Marcar municipios de ese departamento ---
+                                # --- Marcar municipios de ese departamento con el mismo color ---
                                 municipios = municipios_por_departamento.get(nombre_depto, [])
                                 for municipio in municipios:
                                     coords_mun = coords_municipios.get(municipio)
@@ -516,8 +522,8 @@ with tab_explorar:
                                         folium.Marker(
                                             location=coords_mun,
                                             popup=f"<b>{municipio}</b><br>Departamento: {nombre_depto}",
-                                            tooltip=f"{municipio} ({nombre_depto})",   # 👈 tooltip al pasar el cursor
-                                            icon=folium.Icon(color="blue", icon="", prefix="fa"),
+                                            tooltip=f"{municipio} ({nombre_depto})",
+                                            icon=folium.Icon(color="blue", icon_color=color_map[nombre_depto], icon="", prefix="fa"),
                                         ).add_to(m)
 
                     # Mostrar mapa
