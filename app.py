@@ -5,8 +5,7 @@ from pathlib import Path
 import plotly.express as px
 import folium
 from streamlit_folium import st_folium
-import json
-
+import requests
 # ================== CONFIG BÁSICA ==================
 st.set_page_config(
     page_title="Información cualitativa departamental",
@@ -368,7 +367,32 @@ with tab_tabla:
                 st.markdown('</div>', unsafe_allow_html=True)
 
 # --------- EXPLORADOR (Treemap / Sunburst) ----------
-# --- Coordenadas aproximadas de municipios específicos ---
+# -------------------------------
+# -------------------------------
+# Cargar GeoJSON de departamentos desde GeoBoundaries
+# -------------------------------
+@st.cache_data
+def cargar_departamentos():
+    url_meta = "https://www.geoboundaries.org/api/current/gbOpen/COL/ADM1"
+    r = requests.get(url_meta)
+    if r.status_code == 200:
+        meta = r.json()
+        url_geojson = meta["gjDownloadURL"]
+        r2 = requests.get(url_geojson)
+        if r2.status_code == 200:
+            return r2.json()
+        else:
+            st.error("⚠️ No se pudo descargar el archivo GeoJSON desde GeoBoundaries.")
+            return None
+    else:
+        st.error("⚠️ No se pudo obtener metadatos de GeoBoundaries.")
+        return None
+
+geojson_departamentos = cargar_departamentos()
+
+# -------------------------------
+# Coordenadas aproximadas de municipios
+# -------------------------------
 coords_municipios = {
     # 🔹 Huila
     "Villavieja": [3.2189, -75.2189],
@@ -402,18 +426,10 @@ coords_municipios = {
 
     # 🔹 Caquetá
     "San Vicente del Caguán": [2.1167, -74.7667],
-    "Doncello": [1.6789, -75.2806],  # El Doncello
+    "Doncello": [1.6789, -75.2806],
     "Florencia": [1.6144, -75.6062],
     "San José del Fragua": [1.3300, -75.9700],
     "Belén de los Andaquies": [1.4167, -75.8667],
-}
-
-# --- Coordenadas aproximadas de departamentos ---
-coords_departamentos = {
-    "Tolima": [4.3333, -75.0000],
-    "Huila": [2.9167, -75.3333],
-    "Caquetá": [1.6000, -75.6000],
-    "Putumayo": [0.3000, -76.5000],
 }
 
 # --- Relación de municipios por departamento ---
@@ -424,12 +440,15 @@ municipios_por_departamento = {
     "Caquetá": ["San Vicente del Caguán", "Doncello", "Florencia", "San José del Fragua", "Belén de los Andaquies"],
 }
 
-with tab_explorar:
+# -------------------------------
+# Explorador con filtros
+# -------------------------------
+with st.container():
     st.subheader("🗺️ Explorador geográfico con filtros")
     st.caption("Filtra por Departamento, Municipio, Aspecto, Enfoque o Sector y visualiza los resultados en el mapa.")
 
-    # --- Columnas disponibles ---
-    dims = [d for d in ["Departamento", "Municipio", "Aspecto", "Enfoque Turístico", "Sector"] if available(d, df_f)]
+    # --- Columnas disponibles dinámicamente ---
+    dims = [d for d in ["Departamento", "Municipio", "Aspecto", "Enfoque Turístico", "Sector"] if d in df_f.columns]
 
     if len(dims) == 0:
         st.info("⚠️ No se encuentran columnas categóricas para filtrar.")
@@ -444,7 +463,7 @@ with tab_explorar:
         # Aplicar filtros
         df_filtrado = df_f.copy()
         for dim, seleccion in filtros.items():
-            if seleccion:  # Solo aplicar si hay selección
+            if seleccion:
                 df_filtrado = df_filtrado[df_filtrado[dim].isin(seleccion)]
 
         # Layout en dos columnas
@@ -465,43 +484,41 @@ with tab_explorar:
             if len(df_filtrado) == 0:
                 st.caption("No hay datos para mostrar en el mapa.")
             else:
-                # Agrupar por departamento
-                departamentos = df_filtrado.groupby("Departamento").size().reset_index(name="Conteo")
+                departamentos = df_filtrado["Departamento"].unique()
 
                 # Crear mapa
                 m = folium.Map(location=[2.5, -75.0], zoom_start=6, tiles="cartodbpositron")
 
-                # --- 1) Marcar departamentos seleccionados ---
-                for _, row in departamentos.iterrows():
-                    depto = row["Departamento"]
-                    conteo = row["Conteo"]
-                    coords = coords_departamentos.get(depto)
+                # Dibujar solo los departamentos filtrados
+                if geojson_departamentos:
+                    for feature in geojson_departamentos["features"]:
+                        nombre_depto = feature["properties"]["shapeName"]
+                        if nombre_depto in departamentos:
+                            folium.GeoJson(
+                                feature,
+                                name=nombre_depto,
+                                style_function=lambda f: {
+                                    "fillColor": "#3186cc",
+                                    "color": "black",
+                                    "weight": 2,
+                                    "fillOpacity": 0.2,
+                                },
+                                tooltip=folium.GeoJsonTooltip(fields=["shapeName"], aliases=["Departamento:"]),
+                            ).add_to(m)
 
-                    if coords:
-                        folium.CircleMarker(
-                            location=coords,
-                            radius=8 + conteo * 0.3,
-                            popup=f"<b>{depto}</b><br>Registros: {conteo}",
-                            color="darkblue",
-                            fill=True,
-                            fill_color="purple",
-                            fill_opacity=0.6,
-                        ).add_to(m)
-
-                        # --- 2) Marcar municipios del departamento seleccionado ---
-                        municipios = municipios_por_departamento.get(depto, [])
-                        for municipio in municipios:
-                            coords_mun = coords_municipios.get(municipio)
-                            if coords_mun:
-                                folium.Marker(
-                                    location=coords_mun,
-                                    popup=f"<b>{municipio}</b><br>Departamento: {depto}",
-                                    icon=folium.Icon(color="red", icon="info-sign"),
-                                ).add_to(m)
+                            # --- Marcar municipios de ese departamento ---
+                            municipios = municipios_por_departamento.get(nombre_depto, [])
+                            for municipio in municipios:
+                                coords_mun = coords_municipios.get(municipio)
+                                if coords_mun:
+                                    folium.Marker(
+                                        location=coords_mun,
+                                        popup=f"<b>{municipio}</b><br>Departamento: {nombre_depto}",
+                                        icon=folium.Icon(color="red", icon="info-sign"),
+                                    ).add_to(m)
 
                 # Mostrar mapa
-                st_folium(m, width=800, height=500)
-
+                st_folium(m, width=900, height=600)
 
 # --------- BARRAS DINÁMICAS ----------
 with tab_barras:
