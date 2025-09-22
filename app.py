@@ -514,6 +514,7 @@ with st.container():
                                     folium.Marker(
                                         location=coords_mun,
                                         popup=f"<b>{municipio}</b><br>Departamento: {nombre_depto}",
+                                        tooltip=f"{municipio} ({nombre_depto})",   # 👈 tooltip al pasar el cursor
                                         icon=folium.Icon(color="red", icon="info-sign"),
                                     ).add_to(m)
 
