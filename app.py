@@ -14,41 +14,31 @@ st.set_page_config(
     layout="wide"
 )
 
-# Inyectar CSS personalizado para las etiquetas
-# ---- Estilos (CSS) ----
+# ================== ESTILOS CSS ==================
 st.markdown("""
 <style>
-/* Sidebar fondo y tipografía */
 section[data-testid="stSidebar"] {
   background: linear-gradient(180deg, #1e1e2f 0%, #2b2b40 100%);
   color: #fff;
   padding-top: 10px !important;
 }
-
-/* Logo en el sidebar */
 section[data-testid="stSidebar"] img {
   display: block;
   margin: 0 auto;
-  max-width: 290px;  /* controla tamaño máximo */
-  margin-bottom: 8px; /* espacio pequeño debajo del logo */
+  max-width: 290px;
+  margin-bottom: 8px;
 }
-
-/* Línea divisoria */
 section[data-testid="stSidebar"] hr {
   margin: 4px 0 8px 0;
   border: 0;
   border-top: 1px solid #444;
 }
-
-/* Encabezado de filtros */
 section[data-testid="stSidebar"] h2 {
   color: #e5e7eb !important;
   font-weight: 600;
   margin: 6px 0;
   font-size: 1.1rem;
 }
-
-/* Botón limpiar */
 .stButton > button {
   background: linear-gradient(90deg, #9333ea, #3b82f6);
   color: white;
@@ -62,8 +52,6 @@ section[data-testid="stSidebar"] h2 {
 .stButton > button:hover {
   background: linear-gradient(90deg, #a855f7, #60a5fa);
 }
-
-/* KPI Cards */
 .kpi-card {
   border-radius: 18px;
   padding: 18px;
@@ -75,8 +63,6 @@ section[data-testid="stSidebar"] h2 {
 .kpi-card:hover { transform: translateY(-4px); }
 .kpi-title { font-size: 14px; opacity: 0.9; }
 .kpi-value { font-size: 32px; font-weight: bold; }
-
-/* General Cards */
 .card {
   border-radius: 14px; 
   padding: 16px; 
@@ -87,8 +73,6 @@ section[data-testid="stSidebar"] h2 {
 }
 .card:hover { transform: scale(1.02); }
 .card h4 { margin: 0 0 8px 0; color: #111827; }
-
-/* Badges */
 .badge {
   display:inline-block; 
   padding:4px 10px; 
@@ -101,55 +85,50 @@ section[data-testid="stSidebar"] h2 {
   font-weight: 500;
 }
 </style>
-
 """, unsafe_allow_html=True)
 
 # ================== ENCABEZADO ==================
 col_logo, col_title, col_extra = st.columns([2, 5, 2], vertical_alignment="center")
-
 with col_logo:
     try:
-        st.image("data/indus.png", width=120)  # Imagen izquierda
+        st.image("data/indus.png", width=120)
     except Exception:
         pass
-
 with col_title:
     st.markdown(
         """
         <div style="text-align: center;">
             <h1>Bienvenido a la Información Cualitativa Departamental</h1>
-            <p>Levantamiento de información con instrumento de Web Scraping y Análisis de Redes Sociales</p>
+            <p>Levantamiento de información con instrumento de Web Scraping y Análisis de Redes Sociales</p>
         </div>
         """,
         unsafe_allow_html=True
     )
-
 with col_extra:
-    c1, c2 = st.columns([1, 2])  # más espacio vacío a la izquierda
-    with c2:
-        try:
-            st.image("data/fontur_logo.png", width=120)  # Imagen derecha desplazada
-        except Exception:
-            pass
+    try:
+        st.image("data/fontur_logo.png", width=120)
+    except Exception:
+        pass
 
 st.divider()
 
-
-
 # ================== CARGA DE DATOS ==================
-DEFAULT_FILE = Path("data") / "consolidado_turismo_LOTE 1.xlsx"
+DEFAULT_FILE = Path("data") / "consolidado_turismo LOTE 1.xlsx"
+
+# ✅ Lista de hojas válidas (ajústalas a tus nombres reales)
+VALID_SHEETS = ["Cod Tol", "Cod Putumayo", "Cod Huila", "Cod Caquetá"]
 
 @st.cache_data(show_spinner=False)
-def read_excel(file: Path, sheet_name=None):
+def read_excel_all(file: Path, valid_sheets):
     xls = pd.ExcelFile(file, engine="openpyxl")
-    sheets = xls.sheet_names
-    if sheet_name is None:
-        sheet_name = sheets[0]
-    df = xls.parse(sheet_name=sheet_name, dtype=str)
-    return df, sheets
+    df_list = []
+    for sheet in valid_sheets:
+        df_temp = xls.parse(sheet_name=sheet, dtype=str)
+        df_list.append(df_temp)
+    df = pd.concat(df_list, ignore_index=True)
+    return df
 
 def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
-    # Normaliza espacios/acentos y unifica nombres comunes
     df.columns = df.columns.str.strip()
     aliases = {
         "DEPARTAMENTO": "Departamento",
@@ -166,55 +145,42 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
         "NOMBRE": "Nombre",
     }
     df.rename(columns={k: v for k, v in aliases.items() if k in df.columns}, inplace=True)
-    # Limpieza de strings
     df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
-    return df
-
-def available(col, df):
-    return col in df.columns
-
-def options_sorted(series):
-    return sorted([x for x in series.dropna().astype(str).str.strip().unique() if x != ""])
-
-def multiselect_if(col, df, label=None, key=None):
-    if available(col, df):
-        opts = options_sorted(df[col])
-        return st.sidebar.multiselect(label or col, opts, key=key)
-    return []
-
-def filter_by_selection(df, col, selected):
-    if available(col, df) and selected:
-        return df[df[col].isin(selected)]
     return df
 
 if not DEFAULT_FILE.exists():
     st.error(f"⚠️ No se encontró el archivo fijo en: {DEFAULT_FILE}\n\nInclúyelo en el repositorio (carpeta **data/**).")
     st.stop()
 
-df, sheets = read_excel(DEFAULT_FILE)
-selected_sheet = sheets[0]
-if len(sheets) > 1:
-    st.sidebar.subheader("Hojas del archivo")
-    selected_sheet = st.sidebar.selectbox("Selecciona la hoja", sheets, index=0)
-    df, _ = read_excel(DEFAULT_FILE, sheet_name=selected_sheet)
-
+# 👇 Ahora siempre une las 4 hojas que definiste
+df = read_excel_all(DEFAULT_FILE, VALID_SHEETS)
 df = normalize_columns(df)
 
+
+st.caption(f"Fuente: **{DEFAULT_FILE.name}** · Hojas: {', '.join(VALID_SHEETS)}")
+
+
+# ================== FUNCIONES AUXILIARES ==================
+def available(col, df): return col in df.columns
+def options_sorted(series): return sorted([x for x in series.dropna().astype(str).str.strip().unique() if x != ""])
+def multiselect_if(col, df, label=None, key=None):
+    if available(col, df):
+        opts = options_sorted(df[col])
+        return st.sidebar.multiselect(label or col, opts, key=key)
+    return []
+def filter_by_selection(df, col, selected):
+    if available(col, df) and selected:
+        return df[df[col].isin(selected)]
+    return df
+
 # ================== FILTROS ==================
-# Logo arriba en la barra lateral
 st.sidebar.image("data/betagroup_logo.jpg", width=290)
-
-# Línea divisoria
 st.sidebar.markdown("---")
-
-# Encabezado de filtros
 st.sidebar.header("Filtros")
-# Columna para botón
 col_btn, _ = st.sidebar.columns([1,1])
 with col_btn:
     do_reset = st.button("🔄 Limpiar filtros")
 df_f = df.copy()
-
 if not do_reset:
     sel_depto   = multiselect_if("Departamento", df, "Departamento", "depto")
     sel_mpio    = multiselect_if("Municipio", df, "Municipio", "mpio")
@@ -223,25 +189,20 @@ if not do_reset:
     sel_sector  = multiselect_if("Sector", df, "Sector", "sector")
 else:
     sel_depto = sel_mpio = sel_enfoque = sel_aspecto = sel_sector = []
-
 df_f = filter_by_selection(df_f, "Departamento", sel_depto)
 df_f = filter_by_selection(df_f, "Municipio", sel_mpio)
 df_f = filter_by_selection(df_f, "Enfoque Turístico", sel_enfoque)
 df_f = filter_by_selection(df_f, "Aspecto", sel_aspecto)
 df_f = filter_by_selection(df_f, "Sector", sel_sector)
-
 with st.sidebar.expander("🔎 Búsqueda por texto", expanded=False):
     search_cols = [c for c in ["Nombre", "Actor", "Título", "Descripción"] if available(c, df_f)]
     query = st.text_input("Contiene (min. 2 caracteres)")
     if query and len(query) >= 2 and search_cols:
-        mask = False
+        mask = pd.Series(False, index=df_f.index)
         for c in search_cols:
-            mask = (mask | df_f[c].fillna("").astype(str).str.contains(query, case=False, na=False))
+            mask = mask | df_f[c].fillna("").astype(str).str.contains(query, case=False, na=False)
         df_f = df_f[mask]
-# Línea divisoria
 st.sidebar.markdown("---")
-
-# Imagen al final de todos los filtros
 st.sidebar.image("data/OIP.webp", width=290)
 
 # ================== KPIs ==================
@@ -258,7 +219,6 @@ with c4:
     if available("Sector", df_f):
         st.markdown(f'<div class="kpi-card"><p class="kpi-title">Sectores</p><p class="kpi-value">{df_f["Sector"].nunique():,}</p></div>', unsafe_allow_html=True)
 
-st.caption(f"Fuente: **{DEFAULT_FILE.name}** · Hoja: **{selected_sheet}**")
 st.divider()
 
 # ================== TABS ==================
@@ -268,6 +228,9 @@ tab_resumen, tab_tabla, tab_explorar, tab_barras = st.tabs([
     "🗺️ Mapa Geografico",
     "📊 Barras"
 ])
+
+# ... aquí puedes dejar el resto de tu código para resumen, tarjetas, mapa y barras tal como ya lo tienes ...
+
 
 # ================== CSS PARA AGRANDAR TABS ==================
 st.markdown("""
