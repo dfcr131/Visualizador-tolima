@@ -316,20 +316,58 @@ with tab_tabla:
                     st.markdown(" ".join(badges), unsafe_allow_html=True)
 
                 # Descripción
-                st.markdown(f"<h5>Descripción</h5>", unsafe_allow_html=True)
-                desc = row.get("Descripción") or ""
+                desc = (row.get("Descripción") or "").strip()
                 if desc:
+                    st.markdown("<h5>Descripción</h5>", unsafe_allow_html=True)
                     st.markdown(f"<p>{desc}</p>", unsafe_allow_html=True)
 
-                st.markdown('</div>', unsafe_allow_html=True)
-
-                 # Aporte a la investigacion
-                st.markdown(f"<h5>Aporte a la investigación</h5>", unsafe_allow_html=True)
-                apInvest = row.get("Aporte a la Investigación") or ""
+                # Aporte a la investigación
+                apInvest = (row.get("Aporte a la Investigación") or "").strip()
                 if apInvest:
+                    st.markdown("<h5>Aporte a la investigación</h5>", unsafe_allow_html=True)
                     st.markdown(f"<p>{apInvest}</p>", unsafe_allow_html=True)
 
-                st.markdown('</div>', unsafe_allow_html=True)
+                # ================== FUENTE ==================
+                # Columnas posibles para nombre y URL de la fuente
+                fuente_nombre_cols = ["Fuente", "Fuente / Autor", "Autor", "Autores", "Entidad", "Institución"]
+                fuente_url_cols    = ["Fuente URL", "URL", "Enlace", "Link", "Página", "Pagina", "Página web", "Sitio web"]
+
+                # Buscar nombre de fuente
+                fuente_nombre = ""
+                for c in fuente_nombre_cols:
+                    if c in row and str(row.get(c)).strip() not in ["", "nan", "None"]:
+                        fuente_nombre = str(row.get(c)).strip()
+                        break
+
+                # Buscar URL de fuente
+                fuente_url = ""
+                for c in fuente_url_cols:
+                    if c in row and str(row.get(c)).strip() not in ["", "nan", "None"]:
+                        fuente_url = str(row.get(c)).strip()
+                        break
+
+                # Normalizar URL (si no trae esquema)
+                if fuente_url and not fuente_url.lower().startswith(("http://", "https://")):
+                    fuente_url = "https://" + fuente_url
+
+                # Render de la fuente
+                if fuente_nombre or fuente_url:
+                    st.markdown("<h5>Fuente</h5>", unsafe_allow_html=True)
+                    if fuente_url and fuente_nombre:
+                        st.markdown(
+                            f'<p><a href="{fuente_url}" target="_blank" rel="noopener noreferrer">{fuente_nombre}</a></p>',
+                            unsafe_allow_html=True
+                        )
+                    elif fuente_url and not fuente_nombre:
+                        st.markdown(
+                            f'<p><a href="{fuente_url}" target="_blank" rel="noopener noreferrer">{fuente_url}</a></p>',
+                            unsafe_allow_html=True
+                        )
+                    elif fuente_nombre and not fuente_url:
+                        st.markdown(f"<p>{fuente_nombre}</p>", unsafe_allow_html=True)
+                # ================== FIN FUENTE ==================
+
+                st.markdown("</div>", unsafe_allow_html=True)
 
 # --------- EXPLORADOR (Treemap / Sunburst) ----------
 # -------------------------------
