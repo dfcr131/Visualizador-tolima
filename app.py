@@ -6,94 +6,160 @@ import plotly.express as px
 import folium
 from streamlit_folium import st_folium
 import requests
-
+import os
+from PIL import Image, ImageOps
 # ================== CONFIG BÁSICA ==================
 st.set_page_config(
     page_title="Información cualitativa departamental",
     page_icon="data/ubicacion.png",
     layout="wide"
 )
-
-# ================== ESTILOS CSS ==================
+# =========================================================
+# 🌿 ESTILOS ELEGANTES UNIFICADOS + KPI CARDS
+# =========================================================
 st.markdown("""
 <style>
-section[data-testid="stSidebar"] {
-  background: linear-gradient(180deg, #1e1e2f 0%, #2b2b40 100%);
-  color: #fff;
-  padding-top: 10px !important;
+
+/* ---- SIDEBAR ---- */
+div[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #eaf7ef 0%, #d8f1e1 100%) !important;
+    border-right: 2px solid #b6e0c2;
+    padding: 20px;
 }
-section[data-testid="stSidebar"] img {
-  display: block;
-  margin: 0 auto;
-  max-width: 290px;
-  margin-bottom: 8px;
+
+/* Títulos de los filtros */
+div[data-testid="stSidebar"] label {
+    color: #154734 !important;
+    font-weight: 600 !important;
+    font-size: 15px !important;
 }
-section[data-testid="stSidebar"] hr {
-  margin: 4px 0 8px 0;
-  border: 0;
-  border-top: 1px solid #444;
+
+/* Contenedores de selección */
+div[data-baseweb="select"] {
+    background-color: #f7fffa !important;
+    color: #154734 !important;
+    border-radius: 8px !important;
+    border: 1.5px solid #a5d6b0 !important;
 }
-section[data-testid="stSidebar"] h2 {
-  color: #e5e7eb !important;
-  font-weight: 600;
-  margin: 6px 0;
-  font-size: 1.1rem;
+
+/* Texto dentro del select */
+div[data-baseweb="select"] span {
+    color: #154734 !important;
 }
-.stButton > button {
-  background: linear-gradient(90deg, #9333ea, #3b82f6);
-  color: white;
-  border-radius: 8px;
-  border: none;
-  padding: 6px 12px;
-  font-weight: 600;
-  margin-top: 4px;
-  margin-bottom: 8px;
+
+/* Hover de los selectores */
+div[data-baseweb="select"]:hover {
+    border-color: #6bbf74 !important;
+    background-color: #e9f8ee !important;
 }
-.stButton > button:hover {
-  background: linear-gradient(90deg, #a855f7, #60a5fa);
+
+/* Botón de limpiar filtros */
+button[kind="secondary"] {
+    background-color: #6bbf74 !important;
+    color: white !important;
+    border-radius: 8px !important;
+    font-weight: bold !important;
 }
+
+/* Texto general del sidebar */
+div[data-testid="stSidebar"] p, div[data-testid="stSidebar"] span {
+    color: #154734 !important;
+}
+
+/* ---- CUERPO PRINCIPAL ---- */
+.main {
+    background-color: #f9fdfb !important;
+}
+
+/* ---- TARJETAS / CARDS DE MÉTRICAS ---- */
+div[data-testid="stMetricValue"] {
+    color: #154734 !important;
+    font-weight: 700 !important;
+}
+
+div[data-testid="stMetricLabel"] {
+    color: #1e5631 !important;
+    font-weight: 600 !important;
+}
+
+/* Contenedor de las tarjetas generales */
+div.css-1ht1j8u, div.css-12w0qpk, div.css-1r6slb0 {
+    background: linear-gradient(180deg, #e9fbee 0%, #c8e9d3 100%) !important;
+    border: 1.5px solid #a5d6b0 !important;
+    border-radius: 12px !important;
+    box-shadow: 0px 4px 8px rgba(100, 150, 120, 0.25) !important;
+    padding: 15px !important;
+    transition: all 0.3s ease-in-out;
+}
+
+div.css-1ht1j8u:hover, div.css-12w0qpk:hover, div.css-1r6slb0:hover {
+    transform: translateY(-3px);
+    box-shadow: 0px 6px 12px rgba(80, 130, 90, 0.35) !important;
+}
+
+/* ---- TARJETAS KPI PERSONALIZADAS ---- */
 .kpi-card {
-  border-radius: 18px;
-  padding: 18px;
-  background: linear-gradient(135deg, #9333ea 0%, #3b82f6 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-  transition: transform 0.2s ease-in-out;
+    border-radius: 18px;
+    padding: 18px;
+    background: linear-gradient(135deg, #3b7d3b 0%, #6bbf74 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    text-align: center;
 }
-.kpi-card:hover { transform: translateY(-4px); }
-.kpi-title { font-size: 14px; opacity: 0.9; }
-.kpi-value { font-size: 32px; font-weight: bold; }
-.card {
-  border-radius: 14px; 
-  padding: 16px; 
-  border: none;
-  background: #fff;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-  transition: transform 0.2s ease-in-out;
+
+.kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
 }
-.card:hover { transform: scale(1.02); }
-.card h4 { margin: 0 0 8px 0; color: #111827; }
-.badge {
-  display:inline-block; 
-  padding:4px 10px; 
-  border-radius:999px; 
-  background: #eef2ff; 
-  color:#4338ca; 
-  border:1px solid #c7d2fe; 
-  font-size:12px; 
-  margin:2px;
-  font-weight: 500;
+
+/* Subtítulo del KPI */
+.kpi-title {
+    font-size: 14px;
+    opacity: 0.9;
+    font-weight: 500;
+    letter-spacing: 0.4px;
+    color: #e8f5e9;
+    margin-bottom: 4px;
+}
+
+/* Valor del KPI */
+.kpi-value {
+    font-size: 30px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+    line-height: 1.1;
+}
+
+/* Adaptativo */
+@media (max-width: 768px) {
+    .kpi-card {
+        padding: 14px;
+    }
+    .kpi-value {
+        font-size: 24px;
+    }
+}
+
+/* ---- FUENTE GLOBAL ---- */
+html, body, [class*="css"] {
+    font-family: 'Poppins', sans-serif !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
+
+
 # ================== ENCABEZADO ==================
 col_logo, col_title, col_extra = st.columns([2, 5, 2], vertical_alignment="center")
+
 with col_logo:
     try:
-        st.image("data/indus.png", width=120)
+        st.image("data/indus.png", width=200)
     except Exception:
         pass
+
 with col_title:
     st.markdown(
         """
@@ -104,6 +170,7 @@ with col_title:
         """,
         unsafe_allow_html=True
     )
+
 with col_extra:
     try:
         st.image("data/fontur_logo.png", width=120)
@@ -111,6 +178,40 @@ with col_extra:
         pass
 
 st.divider()
+
+# ================== GALERÍA DE IMÁGENES ==================
+# ================== GALERÍA DE IMÁGENES ==================
+carpeta_imagenes = "./data/imagenes"
+
+if os.path.exists(carpeta_imagenes):
+    imagenes = [
+        os.path.join(carpeta_imagenes, img)
+        for img in os.listdir(carpeta_imagenes)
+        if img.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))
+    ]
+
+    if imagenes:
+        st.markdown("<h4 style='text-align:center; color:#1e5631;'>Galería de Imágenes</h4>", unsafe_allow_html=True)
+        cols = st.columns(min(4, len(imagenes)))  # máximo 4 columnas
+
+        for i, img_path in enumerate(imagenes):
+            with cols[i % len(cols)]:
+                try:
+                    # Cargar imagen con ruta absoluta
+                    abs_path = os.path.abspath(img_path)
+                    img = Image.open(abs_path)
+
+                    # Ajustar tamaño uniforme (sin deformar)
+                    img = ImageOps.fit(img, (300, 180), Image.LANCZOS, centering=(0.5, 0.5))
+
+                    # Mostrar imagen ajustada
+                    st.image(img, use_container_width=False)
+                except Exception as e:
+                    st.warning(f"No se pudo cargar: {img_path}\nError: {e}")
+    else:
+        st.info("No se encontraron imágenes en la carpeta.")
+else:
+    st.warning(f"La carpeta '{carpeta_imagenes}' no existe.")
 
 # ================== CARGA DE DATOS (con hipervínculos) ==================
 from openpyxl import load_workbook
@@ -377,47 +478,40 @@ with tab_tabla:
                     st.markdown(f"<p>{apInvest}</p>", unsafe_allow_html=True)
 
                 # ================== FUENTE ==================
-                # Columnas posibles para nombre y URL de la fuente
                 fuente_nombre_cols = ["Fuente", "Fuente / Autor", "Autor", "Autores", "Entidad", "Institución"]
                 fuente_url_cols    = ["Fuente_URL", "Fuente / Autor_URL", "Autor_URL", "Autores_URL", "Entidad_URL", "Institución_URL"]
 
-
-                # Buscar nombre de fuente
-                fuente_nombre = ""
+                fuente_nombre, fuente_url = "", ""
                 for c in fuente_nombre_cols:
                     if c in row and str(row.get(c)).strip() not in ["", "nan", "None"]:
                         fuente_nombre = str(row.get(c)).strip()
                         break
 
-                # Buscar URL de fuente
-                fuente_url = ""
                 for c in fuente_url_cols:
                     if c in row and str(row.get(c)).strip() not in ["", "nan", "None"]:
                         fuente_url = str(row.get(c)).strip()
                         break
 
-                # Normalizar URL (si no trae esquema)
                 if fuente_url and not fuente_url.lower().startswith(("http://", "https://")):
                     fuente_url = "https://" + fuente_url
 
-                # Render de la fuente
                 if fuente_nombre or fuente_url:
                     st.markdown("<h5>Fuente</h5>", unsafe_allow_html=True)
                     if fuente_url and fuente_nombre:
-                        st.markdown(
-                            f'<p><a href="{fuente_url}" target="_blank" rel="noopener noreferrer">{fuente_nombre}</a></p>',
-                            unsafe_allow_html=True
-                        )
-                    elif fuente_url and not fuente_nombre:
-                        st.markdown(
-                            f'<p><a href="{fuente_url}" target="_blank" rel="noopener noreferrer">{fuente_url}</a></p>',
-                            unsafe_allow_html=True
-                        )
-                    elif fuente_nombre and not fuente_url:
+                        st.markdown(f'<p><a href="{fuente_url}" target="_blank" rel="noopener noreferrer">{fuente_nombre}</a></p>', unsafe_allow_html=True)
+                    elif fuente_url:
+                        st.markdown(f'<p><a href="{fuente_url}" target="_blank" rel="noopener noreferrer">{fuente_url}</a></p>', unsafe_allow_html=True)
+                    elif fuente_nombre:
                         st.markdown(f"<p>{fuente_nombre}</p>", unsafe_allow_html=True)
                 # ================== FIN FUENTE ==================
 
                 st.markdown("</div>", unsafe_allow_html=True)
+
+                # 💚 Línea separadora verde elegante
+                st.markdown("""
+                <hr style="border: none; border-top: 3px solid #4CAF50; margin: 18px 0; opacity: 0.6;">
+                """, unsafe_allow_html=True)
+
 
 # --------- EXPLORADOR (Treemap / Sunburst) ----------
 # -------------------------------
