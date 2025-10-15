@@ -112,21 +112,68 @@ with col_extra:
 
 st.divider()
 
-# ================== CARGA DE DATOS ==================
-DEFAULT_FILE = Path("data") / "consolidado_turismo LOTE 1.xlsx"
+# ================== CARGA DE DATOS (con hipervínculos) ==================
+from openpyxl import load_workbook
+from pathlib import Path
+import pandas as pd
+import streamlit as st
 
-# ✅ Lista de hojas válidas (ajústalas a tus nombres reales)
+DEFAULT_FILE = Path("data") / "consolidado_turismo LOTE 1 final.xlsx"
+
+# ✅ Lista de hojas válidas
 VALID_SHEETS = ["Cod Tol", "Cod Putumayo", "Cod Huila", "Cod Caquetá"]
 
 @st.cache_data(show_spinner=False)
 def read_excel_all(file: Path, valid_sheets):
-    xls = pd.ExcelFile(file, engine="openpyxl")
+    """
+    Lee todas las hojas de un Excel e incluye tanto el texto visible como los hipervínculos.
+    Si una celda contiene un enlace, se crea una columna adicional con el sufijo '_URL'.
+    """
+    wb = load_workbook(file, data_only=True)
     df_list = []
+
     for sheet in valid_sheets:
-        df_temp = xls.parse(sheet_name=sheet, dtype=str)
+        if sheet not in wb.sheetnames:
+            st.warning(f"⚠️ La hoja '{sheet}' no existe en el archivo.")
+            continue
+
+        ws = wb[sheet]
+
+        # Obtener encabezados
+        headers = [cell.value for cell in ws[1]]
+        if not headers:
+            st.warning(f"⚠️ La hoja '{sheet}' no tiene encabezados válidos.")
+            continue
+
+        data = []
+        for row in ws.iter_rows(min_row=2, max_col=len(headers)):
+            values = []
+            for cell in row:
+                text = cell.value
+                url = cell.hyperlink.target if cell.hyperlink else None
+                values.append((text, url))
+            data.append(values)
+
+        # Crear diccionario: texto + posibles URLs
+        df_dict = {}
+        for j, header in enumerate(headers):
+            # Texto visible
+            df_dict[header] = [data[i][j][0] for i in range(len(data))]
+            # Enlace si existe
+            urls = [data[i][j][1] for i in range(len(data))]
+            if any(urls):
+                df_dict[f"{header}_URL"] = urls
+
+        df_temp = pd.DataFrame(df_dict)
         df_list.append(df_temp)
+
+    if not df_list:
+        st.error("No se pudieron leer las hojas especificadas.")
+        st.stop()
+
     df = pd.concat(df_list, ignore_index=True)
     return df
+
 
 def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     df.columns = df.columns.str.strip()
@@ -148,14 +195,15 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
     return df
 
+
+# ================== VALIDACIÓN Y EJECUCIÓN ==================
 if not DEFAULT_FILE.exists():
-    st.error(f"⚠️ No se encontró el archivo fijo en: {DEFAULT_FILE}\n\nInclúyelo en el repositorio (carpeta **data/**).")
+    st.error(f"⚠️ No se encontró el archivo fijo en: {DEFAULT_FILE}\n\nInclúyelo en la carpeta **data/**.")
     st.stop()
 
-# 👇 Ahora siempre une las 4 hojas que definiste
+# 👇 Cargar y normalizar los datos
 df = read_excel_all(DEFAULT_FILE, VALID_SHEETS)
 df = normalize_columns(df)
-
 
 st.caption(f"Fuente: **{DEFAULT_FILE.name}** · Hojas: {', '.join(VALID_SHEETS)}")
 
@@ -222,11 +270,12 @@ with c4:
 st.divider()
 
 # ================== TABS ==================
-tab_resumen, tab_tabla, tab_explorar, tab_barras = st.tabs([
+tab_resumen, tab_tabla, tab_explorar, tab_barras, tab_sentimientos = st.tabs([
     "📌 Resumen",
     "📋 Tarjetas de Información",
     "🗺️ Mapa Geografico",
-    "📊 Barras"
+    "📊 Barras",
+    "💬 Sentimientos"
 ])
 
 # ... aquí puedes dejar el resto de tu código para resumen, tarjetas, mapa y barras tal como ya lo tienes ...
@@ -330,7 +379,8 @@ with tab_tabla:
                 # ================== FUENTE ==================
                 # Columnas posibles para nombre y URL de la fuente
                 fuente_nombre_cols = ["Fuente", "Fuente / Autor", "Autor", "Autores", "Entidad", "Institución"]
-                fuente_url_cols    = ["Fuente URL", "URL", "Enlace", "Link", "Página", "Pagina", "Página web", "Sitio web"]
+                fuente_url_cols    = ["Fuente_URL", "Fuente / Autor_URL", "Autor_URL", "Autores_URL", "Entidad_URL", "Institución_URL"]
+
 
                 # Buscar nombre de fuente
                 fuente_nombre = ""
@@ -579,3 +629,72 @@ with tab_barras:
             )
 
             st.plotly_chart(fig, use_container_width=True)
+            # --------- NUEVA PESTAÑA: ANÁLISIS DE SENTIMIENTOS ----------
+with tab_sentimientos:
+    st.subheader("💬 Análisis de Sentimientos Identificados")
+
+    if not available("Sentimiento identificado", df_f):
+        st.warning("⚠️ No se encontró la columna 'Sentimiento identificado' en los datos.")
+    else:
+        # Normalizar texto de la columna
+        df_f["Sentimiento identificado"] = (
+            df_f["Sentimiento identificado"]
+            .astype(str)
+            .str.strip()
+            .str.capitalize()
+        )
+
+        # Contar los sentimientos
+        sentiment_counts = (
+            df_f["Sentimiento identificado"]
+            .value_counts()
+            .reset_index()
+        )
+        sentiment_counts.columns = ["Sentimiento identificado", "Conteo"]
+
+        # Mostrar tabla resumen
+        st.markdown("### 📋 Distribución de sentimientos")
+        st.dataframe(estilo_tabla(sentiment_counts), use_container_width=True, hide_index=True)
+
+        # Colores personalizados según sentimiento
+        sentiment_colors = {
+            "Muy positivo": "#2ECC71",   # Verde fuerte
+            "Positivo": "#58D68D",       # Verde claro
+            "Neutro": "#B2BABB",         # Gris
+            "Negativo": "#E67E22",       # Naranja
+            "Muy negativo": "#E74C3C",   # Rojo
+        }
+
+        # Crear gráfico circular
+        fig_pie = px.pie(
+            sentiment_counts,
+            names="Sentimiento identificado",
+            values="Conteo",
+            color="Sentimiento identificado",
+            color_discrete_map=sentiment_colors,
+            hole=0.3,
+            title="Distribución porcentual de sentimientos"
+        )
+        fig_pie.update_traces(
+            textposition="inside",
+            textinfo="percent+label",
+            pull=[0.05] * len(sentiment_counts)
+        )
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+        # Mostrar registros por sentimiento
+        st.markdown("### 🔍 Registros agrupados por sentimiento")
+        sentimiento_sel = st.selectbox(
+            "Selecciona un sentimiento para explorar ejemplos:",
+            sentiment_counts["Sentimiento identificado"]
+        )
+
+        df_sel = df_f[df_f["Sentimiento identificado"] == sentimiento_sel]
+        if df_sel.empty:
+            st.info("No hay registros con este sentimiento.")
+        else:
+            for i, row in df_sel.head(20).iterrows():
+                st.markdown(
+                    f"**• {row.get('Título', 'Sin título')}** — "
+                    f"{row.get('Descripción', '')[:200]}..."
+                )
